@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Zap, Shield, Swords, Loader2, X } from 'lucide-react';
 
 export default function MatchmakingPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -29,19 +31,14 @@ export default function MatchmakingPage() {
 
   const connectToWebSocket = () => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      console.error('No token found in localStorage');
-      return;
-    }
+    if (!token) return;
 
-    // Use ws://localhost:8000/ws if dev, ideally from env
     const wsUrl = `ws://localhost:8000/ws?token=${token}`;
     console.log('Connecting to WebSocket:', wsUrl);
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       console.log('Connected to WebSocket');
-      // Send join event
       ws.send(JSON.stringify({
         event: 'queue:join',
         data: { difficulty }
@@ -56,17 +53,13 @@ export default function MatchmakingPage() {
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
-      console.log('Received:', message);
-
       if (message.event === 'match:found') {
         setStatus('found');
         const matchId = message.data.matchId;
-        // Delay redirect slightly for visual effect
         setTimeout(() => {
             router.push(`/editor/${matchId}`);
         }, 1500);
       }
-      // Handle fallback to practice?
     };
 
     ws.onclose = () => {
@@ -90,72 +83,120 @@ export default function MatchmakingPage() {
     }
   };
 
-  if (authLoading || !user) return <div className="bg-zinc-950 min-h-screen text-white flex items-center justify-center">Loading...</div>;
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full bg-zinc-900 rounded-2xl p-8 border border-zinc-800 text-center shadow-xl">
-        <h2 className="text-3xl font-bold mb-2">Find a Match</h2>
-        <p className="text-zinc-400 mb-8">Select difficulty to start searching</p>
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-zinc-950 to-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      
+      {/* Background decoration */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-500/10 rounded-full blur-[120px]" />
+
+      <Card className="w-full max-w-lg glass-card border-white/5 relative z-10 p-8">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 mb-6 ring-1 ring-white/10">
+            <Swords className="w-8 h-8 text-blue-400" />
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight mb-2">Find a Match</h2>
+          <p className="text-zinc-400">Select difficulty level to start searching</p>
+        </div>
 
         {status === 'idle' && (
-          <div className="space-y-6">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-3 gap-3">
               {(['easy', 'medium', 'hard'] as const).map((level) => (
                 <button
                   key={level}
                   onClick={() => setDifficulty(level)}
-                  className={`py-3 px-4 rounded-lg font-medium capitalize transition-all ${
+                  className={`relative group p-4 rounded-xl border transition-all duration-300 ${
                     difficulty === level
-                      ? 'bg-blue-600 text-white ring-2 ring-blue-500 ring-offset-2 ring-offset-zinc-900'
-                      : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                      ? 'bg-blue-600/10 border-blue-500/50 text-white shadow-[0_0_20px_-5px_rgba(37,99,235,0.3)]'
+                      : 'bg-zinc-900/50 border-white/5 text-zinc-400 hover:bg-zinc-800/50 hover:border-white/10'
                   }`}
                 >
-                  {level}
+                  <div className={`text-sm font-medium capitalize mb-1 ${difficulty === level ? 'text-blue-400' : 'text-zinc-300'}`}>
+                    {level}
+                  </div>
+                  <div className="flex justify-center">
+                    {[...Array(level === 'easy' ? 1 : level === 'medium' ? 2 : 3)].map((_, i) => (
+                        <div key={i} className={`w-1.5 h-1.5 rounded-full mx-0.5 ${difficulty === level ? 'bg-blue-400' : 'bg-zinc-600'}`} />
+                    ))}
+                  </div>
                 </button>
               ))}
             </div>
 
             <Button 
                 onClick={connectToWebSocket}
-                className="w-full h-12 text-lg bg-emerald-600 hover:bg-emerald-700"
+                className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-xl shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               Start Searching
+              <Zap className="w-5 h-5 ml-2 fill-current" />
             </Button>
           </div>
         )}
 
         {status === 'searching' && (
-          <div className="py-8">
-            <div className="relative w-20 h-20 mx-auto mb-6">
-               <div className="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
-               <div className="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
+          <div className="py-8 animate-in fade-in zoom-in duration-300">
+            <div className="relative w-32 h-32 mx-auto mb-8">
+               {/* Radar Waves */}
+               <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping opacity-20" style={{ animationDuration: '3s' }}></div>
+               <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping opacity-20 delay-700" style={{ animationDuration: '3s' }}></div>
+               
+               {/* Center Icon */}
+               <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-24 h-24 bg-zinc-900 rounded-full border border-blue-500/30 flex items-center justify-center relative shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)]">
+                     <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                  </div>
+               </div>
             </div>
-            <h3 className="text-xl font-semibold animate-pulse">Looking for opponent...</h3>
-            <p className="text-zinc-500 mt-2">Difficulty: <span className="capitalize">{difficulty}</span></p>
             
-            <Button 
-                onClick={cancelSearch}
-                variant="ghost" 
-                className="mt-8 text-red-400 hover:text-red-300 hover:bg-red-900/10"
-            >
-              Cancel
-            </Button>
+            <div className="text-center space-y-2">
+                <h3 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 animate-pulse">
+                    Looking for opponent...
+                </h3>
+                <p className="text-zinc-500 text-sm">
+                    Difficulty: <span className="capitalize text-zinc-300">{difficulty}</span>
+                </p>
+                <div className="pt-2 text-xs text-zinc-600">
+                    Estimated wait: ~30s
+                </div>
+            </div>
+            
+            <div className="mt-8 flex justify-center">
+                <Button 
+                    onClick={cancelSearch}
+                    variant="ghost" 
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 px-6"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel Search
+                </Button>
+            </div>
           </div>
         )}
 
         {status === 'found' && (
-          <div className="py-8">
-             <div className="w-20 h-20 mx-auto mb-6 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500">
-                <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
+          <div className="py-12 animate-in fade-in zoom-in duration-500 text-center">
+             <div className="w-24 h-24 mx-auto mb-6 bg-emerald-500/10 rounded-full flex items-center justify-center ring-1 ring-emerald-500/30 shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)]">
+                <Shield className="w-12 h-12 text-emerald-500" />
              </div>
-             <h3 className="text-2xl font-bold text-white mb-2">Match Found!</h3>
+             <h3 className="text-3xl font-bold text-white mb-2">Match Found!</h3>
              <p className="text-zinc-400">Preparing battleground...</p>
+             <div className="mt-6 flex justify-center space-x-1">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+             </div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

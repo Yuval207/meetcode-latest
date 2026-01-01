@@ -5,6 +5,8 @@ import { useParams } from 'next/navigation';
 import { Editor } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { Play, Send, FileCode, Clock, CheckCircle2, Terminal } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 export default function EditorPage() {
   const { matchId } = useParams();
@@ -17,6 +19,7 @@ export default function EditorPage() {
   // Mock data for now (later fetch from API based on matchId)
   const problem = {
     title: "Two Sum",
+    difficulty: "Easy",
     description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
     examples: [
         { input: "nums = [2,7,11,15], target = 9", output: "[0,1]" },
@@ -54,7 +57,7 @@ export default function EditorPage() {
   }, [matchId]);
 
   const handleRun = () => {
-    setOutput('Running test cases...\nTest Case 1: Passed\nTest Case 2: Passed');
+    setOutput('Running test cases...\n> Test Case 1: Passed\n> Test Case 2: Passed');
   };
 
   const handleSubmit = () => {
@@ -62,38 +65,68 @@ export default function EditorPage() {
   };
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-white overflow-hidden">
+    <div className="flex h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-zinc-950 to-black text-white overflow-hidden font-sans">
+        
         {/* Left Panel: Problem Description */}
-        <div className="w-1/2 border-r border-zinc-800 flex flex-col">
-            <div className="h-12 border-b border-zinc-800 flex items-center px-4 bg-zinc-900">
-                <div className="flex space-x-4">
+        <div className="w-1/2 flex flex-col border-r border-white/5 bg-zinc-900/30 backdrop-blur-sm">
+            {/* Header */}
+            <div className="h-14 border-b border-white/5 flex items-center px-6 bg-zinc-900/50 backdrop-blur-md">
+                <div className="flex space-x-6">
                     <button 
                         onClick={() => setActiveTab('problem')}
-                        className={`text-sm font-medium h-12 border-b-2 px-2 ${activeTab === 'problem' ? 'border-blue-500 text-white' : 'border-transparent text-zinc-400 hover:text-white'}`}
+                        className={`text-sm font-medium h-14 border-b-2 flex items-center space-x-2 transition-colors ${
+                            activeTab === 'problem' 
+                            ? 'border-blue-500 text-blue-400' 
+                            : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                        }`}
                     >
-                        Problem
+                        <FileCode className="w-4 h-4" />
+                        <span>Problem</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('submissions')}
-                        className={`text-sm font-medium h-12 border-b-2 px-2 ${activeTab === 'submissions' ? 'border-blue-500 text-white' : 'border-transparent text-zinc-400 hover:text-white'}`}
+                        className={`text-sm font-medium h-14 border-b-2 flex items-center space-x-2 transition-colors ${
+                            activeTab === 'submissions' 
+                            ? 'border-blue-500 text-blue-400' 
+                            : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                        }`}
                     >
-                        Submissions
+                        <Clock className="w-4 h-4" />
+                        <span>Submissions</span>
                     </button>
                 </div>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-6">
-                <h1 className="text-2xl font-bold mb-4">{problem.title}</h1>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <div className="flex items-center space-x-3 mb-6">
+                    <h1 className="text-3xl font-bold text-white">{problem.title}</h1>
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        {problem.difficulty}
+                    </span>
+                </div>
+
                 <div className="prose prose-invert max-w-none">
-                    <p className="text-zinc-300 mb-6">{problem.description}</p>
+                    <p className="text-zinc-300 text-lg leading-relaxed mb-8">{problem.description}</p>
                     
-                    <h3 className="text-lg font-semibold mb-3">Examples</h3>
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                        <CheckCircle2 className="w-5 h-5 mr-2 text-blue-500" />
+                        Examples
+                    </h3>
                     <div className="space-y-4">
                         {problem.examples.map((ex, i) => (
-                            <div key={i} className="bg-zinc-900 p-4 rounded-lg">
-                                <p className="font-mono text-sm text-zinc-400">Input: <span className="text-zinc-200">{ex.input}</span></p>
-                                <p className="font-mono text-sm text-zinc-400 mt-1">Output: <span className="text-zinc-200">{ex.output}</span></p>
-                            </div>
+                            <Card key={i} className="bg-zinc-900/50 border-white/5 p-4">
+                                <div className="space-y-2 font-mono text-sm">
+                                    <div>
+                                        <span className="text-zinc-500">Input:</span> 
+                                        <span className="text-zinc-200 ml-2">{ex.input}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-zinc-500">Output:</span>
+                                        <span className="text-emerald-400 ml-2">{ex.output}</span>
+                                    </div>
+                                </div>
+                            </Card>
                         ))}
                     </div>
                 </div>
@@ -101,17 +134,35 @@ export default function EditorPage() {
         </div>
 
         {/* Right Panel: Editor & Console */}
-        <div className="w-1/2 flex flex-col">
+        <div className="w-1/2 flex flex-col bg-zinc-950/50">
             {/* Editor Header */}
-            <div className="h-12 border-b border-zinc-800 flex items-center justify-between px-4 bg-zinc-900">
-                 <div className="text-sm text-zinc-400">Python 3</div>
-                 <div className="flex items-center space-x-2">
-                     <Button onClick={handleRun} variant="secondary" size="sm" className="h-8">Run</Button>
-                     <Button onClick={handleSubmit} size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700">Submit</Button>
+            <div className="h-14 border-b border-white/5 flex items-center justify-between px-6 bg-zinc-900/50 backdrop-blur-md">
+                 <div className="flex items-center space-x-2 px-3 py-1 rounded-md bg-white/5 border border-white/5">
+                    <span className="text-xs text-zinc-400 font-mono">Python 3</span>
+                 </div>
+                 
+                 <div className="flex items-center space-x-3">
+                     <Button 
+                        onClick={handleRun} 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-9 px-4 text-zinc-300 hover:text-white hover:bg-white/10"
+                     >
+                        <Play className="w-4 h-4 mr-2 fill-current" />
+                        Run
+                     </Button>
+                     <Button 
+                        onClick={handleSubmit} 
+                        size="sm" 
+                        className="h-9 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 border-0"
+                     >
+                        <Send className="w-4 h-4 mr-2" />
+                        Submit
+                     </Button>
                  </div>
             </div>
 
-            {/* Editor */}
+            {/* Editor Area */}
             <div className="flex-grow relative">
                 <Editor
                     height="100%"
@@ -121,21 +172,41 @@ export default function EditorPage() {
                     onChange={(val) => setCode(val || '')}
                     options={{
                         minimap: { enabled: false },
-                        fontSize: 14,
-                        padding: { top: 16 },
+                        fontSize: 15,
+                        fontFamily: 'var(--font-mono)',
+                        lineHeight: 24,
+                        padding: { top: 24 },
                         scrollBeyondLastLine: false,
+                        smoothScrolling: true,
+                        cursorBlinking: "smooth",
+                        cursorSmoothCaretAnimation: "on",
+                        roundedSelection: true,
                     }}
                 />
             </div>
 
             {/* Console/Output */}
-            <div className="h-1/3 border-t border-zinc-800 bg-zinc-900 p-4 flex flex-col">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-zinc-400">Console</span>
-                    <button onClick={() => setOutput('')} className="text-xs text-zinc-500 hover:text-zinc-300">Clear</button>
+            <div className="h-1/3 border-t border-white/5 bg-zinc-900/80 backdrop-blur-xl flex flex-col">
+                <div className="h-10 flex items-center justify-between px-4 border-b border-white/5 bg-white/5">
+                    <div className="flex items-center space-x-2 text-zinc-400">
+                        <Terminal className="w-4 h-4" />
+                        <span className="text-xs font-semibold uppercase tracking-wider">Console</span>
+                    </div>
+                    <button 
+                        onClick={() => setOutput('')} 
+                        className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors uppercase font-medium"
+                    >
+                        Clear
+                    </button>
                 </div>
-                <div className="flex-1 font-mono text-sm text-zinc-300 overflow-y-auto whitespace-pre-wrap">
-                    {output || <span className="text-zinc-600 italic">Run execution to see output...</span>}
+                <div className="flex-1 p-4 font-mono text-sm text-zinc-300 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
+                    {output ? (
+                        <div className="animate-in fade-in slide-in-from-left-2 duration-200">
+                            {output}
+                        </div>
+                    ) : (
+                        <span className="text-zinc-600 italic">Run your code to see output...</span>
+                    )}
                 </div>
             </div>
         </div>
