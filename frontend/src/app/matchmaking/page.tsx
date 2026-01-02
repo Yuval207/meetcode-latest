@@ -12,6 +12,7 @@ export default function MatchmakingPage() {
   const router = useRouter();
   const [status, setStatus] = useState<'idle' | 'searching' | 'found'>('idle');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [timeLeft, setTimeLeft] = useState(60);
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -19,6 +20,16 @@ export default function MatchmakingPage() {
       router.push('/login');
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (status === 'searching' && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [status, timeLeft]);
 
   useEffect(() => {
     // Cleanup on unmount
@@ -44,6 +55,7 @@ export default function MatchmakingPage() {
         data: { difficulty }
       }));
       setStatus('searching');
+      setTimeLeft(60);
     };
 
     ws.onerror = (error) => {
@@ -53,12 +65,16 @@ export default function MatchmakingPage() {
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
+      
       if (message.event === 'match:found') {
         setStatus('found');
-        const matchId = message.data.matchId;
+        const { matchId, startTime } = message.data;
         setTimeout(() => {
-            router.push(`/editor/${matchId}`);
+            router.push(`/editor/${matchId}?startTime=${startTime}`);
         }, 1500);
+      } else if (message.event === 'match:practice') {
+        const { practiceId } = message.data;
+        router.push(`/editor/${practiceId}?mode=practice`);
       }
     };
 
@@ -152,7 +168,7 @@ export default function MatchmakingPage() {
                {/* Center Icon */}
                <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-24 h-24 bg-zinc-900 rounded-full border border-blue-500/30 flex items-center justify-center relative shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)]">
-                     <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                     <span className="text-2xl font-bold font-mono text-blue-500">{timeLeft}</span>
                   </div>
                </div>
             </div>
@@ -165,7 +181,7 @@ export default function MatchmakingPage() {
                     Difficulty: <span className="capitalize text-zinc-300">{difficulty}</span>
                 </p>
                 <div className="pt-2 text-xs text-zinc-600">
-                    Estimated wait: ~30s
+                    Entering practice mode in {timeLeft}s
                 </div>
             </div>
             

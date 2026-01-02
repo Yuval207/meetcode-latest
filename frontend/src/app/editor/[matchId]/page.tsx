@@ -1,20 +1,54 @@
+
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Editor } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { Play, Send, FileCode, Clock, CheckCircle2, Terminal } from 'lucide-react';
+import { Play, Send, FileCode, Clock, CheckCircle2, Terminal, Timer as TimerIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 export default function EditorPage() {
   const { matchId } = useParams();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [code, setCode] = useState('// Write your solution here\n');
   const [output, setOutput] = useState('');
   const [activeTab, setActiveTab] = useState<'problem' | 'submissions'>('problem');
+  const [timeEncoded, setTimeEncoded] = useState<string>('00:00');
   const socketRef = useRef<WebSocket | null>(null);
+
+  // Timer Logic
+  useEffect(() => {
+    // Mode check
+    const isPractice = searchParams.get('mode') === 'practice' || (matchId as string).startsWith('practice-');
+    const startTimeParam = searchParams.get('startTime');
+    let startTime = startTimeParam ? parseInt(startTimeParam) : Date.now();
+
+    // If practice, we just start counting from now (or 0)
+    // If match, we sync with startTime
+    
+    // For match with future start time (buffer 5s), we show negative or 0 until start
+    
+    const interval = setInterval(() => {
+        const now = Date.now();
+        let diff = now - startTime;
+
+        if (diff < 0) {
+            // Match hasn't started yet
+             setTimeEncoded(`Starting in ${Math.ceil(Math.abs(diff) / 1000)}s`);
+             return;
+        }
+
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        setTimeEncoded(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [matchId, searchParams]);
+
 
   // Mock data for now (later fetch from API based on matchId)
   const problem = {
@@ -137,8 +171,16 @@ export default function EditorPage() {
         <div className="w-1/2 flex flex-col bg-zinc-950/50">
             {/* Editor Header */}
             <div className="h-14 border-b border-white/5 flex items-center justify-between px-6 bg-zinc-900/50 backdrop-blur-md">
-                 <div className="flex items-center space-x-2 px-3 py-1 rounded-md bg-white/5 border border-white/5">
-                    <span className="text-xs text-zinc-400 font-mono">Python 3</span>
+                 <div className="flex items-center space-x-4">
+                     <div className="flex items-center space-x-2 px-3 py-1 rounded-md bg-white/5 border border-white/5">
+                        <span className="text-xs text-zinc-400 font-mono">Python 3</span>
+                     </div>
+                     
+                     {/* Timer Display */}
+                     <div className="flex items-center space-x-2 px-3 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                        <TimerIcon className="w-4 h-4" />
+                        <span className="text-sm font-medium font-mono tabular-nums">{timeEncoded}</span>
+                     </div>
                  </div>
                  
                  <div className="flex items-center space-x-3">
